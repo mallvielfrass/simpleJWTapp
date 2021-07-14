@@ -6,7 +6,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-func CreateRefreshToken(creds Credentials) (string, int64, error) {
+func CreateRefreshToken(creds Credentials) (string, time.Time, error) {
 	expirationTimeRefresh := time.Now().Add(30 * 24 * time.Hour)
 	claimsRefresh := &Claims{
 		Username: creds.Username,
@@ -19,11 +19,11 @@ func CreateRefreshToken(creds Credentials) (string, int64, error) {
 	// Create the JWT string
 	tokenStringRefresh, err := tokenRefresh.SignedString(jwtKeyRefresh)
 	if err != nil {
-		return "", 0, err
+		return "", expirationTimeRefresh, err
 	}
-	return tokenStringRefresh, expirationTimeRefresh.Unix(), nil
+	return tokenStringRefresh, expirationTimeRefresh, nil
 }
-func CreateToken(creds Credentials, RefreshHash string, RefreshUUID string) (string, int64, error) {
+func CreateToken(creds Credentials, RefreshHash string, RefreshUUID string) (string, time.Time, error) {
 	expirationTime := time.Now().Add(15 * time.Minute)
 	claims := &ClaimsToken{
 		Username:    creds.Username,
@@ -38,7 +38,7 @@ func CreateToken(creds Credentials, RefreshHash string, RefreshUUID string) (str
 	// Create the JWT string
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
-		return "", expirationTime.Unix(), err
+		return "", expirationTime, err
 	}
-	return tokenString, expirationTime.Unix(), nil
+	return tokenString, expirationTime, nil
 }
