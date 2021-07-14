@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/mallvielfrass/fmc"
 )
 
 var jwtKey = []byte("my_secret_key")
@@ -35,6 +37,74 @@ type ClaimsToken struct {
 	jwt.StandardClaims
 }
 
+func (app App) signUp(w http.ResponseWriter, r *http.Request) {
+	var creds Credentials
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err = json.Unmarshal(b, &creds)
+	if err != nil {
+		fmt.Println(err)
+		// If the structure of the body is wrong, return an HTTP error
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if creds.Username == "" || creds.Password == "" {
+		fmt.Println(err)
+		// If the structure of the body is wrong, return an HTTP error
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var user User
+	if err := app.DB.Where("name = ?", creds.Username).First(&user).Error; err == nil {
+		fmt.Printf("%s exist\n", creds.Username)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	hashPass, err := HashPassword(creds.Password)
+	fmc.ErrorHandle(err, "Hashing password")
+	data := time.Now() //.Format("2006.01.02 15:04:05")
+	u := User{
+		Name:         creds.Username,
+		Data:         data,
+		PasswordHash: hashPass,
+	}
+	result := app.DB.Create(&u)
+	fmt.Println(result)
+	//Refresh___________________________________
+	tokenRefresh, expirationTimeRefresh, err := CreateRefreshToken(creds)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	RefreshUUID := generageRandomString(16)
+	RefreshHash, err := HashPassword(tokenRefresh)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	token, tokenExp, err := CreateToken(creds, RefreshHash, RefreshUUID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:    "token",
+		Value:   token,
+		Expires: tokenExp,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    "refresh",
+		Value:   tokenRefresh,
+		Expires: expirationTimeRefresh,
+	})
+
+	http.RedirectHandler("/welcome", http.StatusMovedPermanently)
+}
 func Signin(w http.ResponseWriter, r *http.Request) {
 
 	var creds Credentials
