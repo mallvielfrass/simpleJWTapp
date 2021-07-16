@@ -15,3 +15,9 @@ type User struct {
 type App struct {
 	DB *gorm.DB
 }
+type TokenBase struct {
+	UserID       string
+	TokenRefresh string
+	UUID         string
+	Data         time.Time
+}

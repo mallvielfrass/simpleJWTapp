@@ -17,17 +17,18 @@ func main() {
 
 	// Migrate the schema
 	db.AutoMigrate(&User{})
+	db.AutoMigrate(&TokenBase{})
 	app := App{db}
 	r := chi.NewRouter()
 	//r.Use(wst.MiddlewareAllowCORS)
 	r.Use(wst.MiddlewareURL)
 	r.HandleFunc("/signup", app.signUp)
-	r.HandleFunc("/signin", Signin)
-	r.With(MiddlewareJWT).Route("/auth", func(r chi.Router) {
+	r.HandleFunc("/signin", app.Signin)
+	r.With(app.MiddlewareJWT).Route("/auth", func(r chi.Router) {
 		r.HandleFunc("/welcome", Welcome)
 	})
 
-	r.HandleFunc("/refresh", Refresh)
+	r.HandleFunc("/refresh", app.Refresh)
 
 	// r.With(wst.MiddlewareJSON).Route("/api", func(r chi.Router) {
 	// 	//only not auth methods

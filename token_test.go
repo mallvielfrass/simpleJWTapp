@@ -12,7 +12,7 @@ func TestCreateRefreshToken(t *testing.T) {
 	c := Credentials{
 		Username: "userx",
 	}
-	str, _, err := CreateRefreshToken(c)
+	str, _, err := CreateRefreshToken(c.Username)
 	if err != nil {
 		t.Errorf("Error: \n\thandle Err: %s\n", err)
 	}
@@ -36,7 +36,7 @@ func TestCreateToken(t *testing.T) {
 	c := Credentials{
 		Username: "userx",
 	}
-	str, _, err := CreateRefreshToken(c)
+	str, _, err := CreateRefreshToken(c.Username)
 	if err != nil {
 		t.Errorf("Error: \n\thandle Err: %s\n", err)
 	}
@@ -45,7 +45,7 @@ func TestCreateToken(t *testing.T) {
 		t.Errorf("Error: \n\thandle Err: %s\n", err)
 	}
 	RefreshUUID := generageRandomString(16)
-	token, _, err := CreateToken(c, RefreshHash, RefreshUUID)
+	token, _, err := CreateToken(c.Username, RefreshHash, RefreshUUID)
 	if err != nil {
 		t.Errorf("Error: \n\thandle Err: %s\n", err)
 	}

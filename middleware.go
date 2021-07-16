@@ -1,13 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/mallvielfrass/fmc"
 )
 
-func MiddlewareJWT(next http.Handler) http.Handler {
+func (app App) MiddlewareJWT(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// We can obtain the session token from the requests cookies, which come with every request
 		c, err := r.Cookie("token")
@@ -26,7 +28,7 @@ func MiddlewareJWT(next http.Handler) http.Handler {
 		tknStr := c.Value
 
 		// Initialize a new instance of `Claims`
-		claims := &Claims{}
+		claims := &ClaimsToken{}
 
 		// Parse the JWT string and store the result in `claims`.
 		// Note that we are passing the key in this method as well. This method will return an error
@@ -44,6 +46,33 @@ func MiddlewareJWT(next http.Handler) http.Handler {
 			return
 		}
 		if !tkn.Valid {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		fmc.PrintStruct(claims)
+		userRefHash := claims.RefreshHash
+		var tokBase TokenBase
+		if err := app.DB.Where("user_id = ? and uuid = ?", claims.Username, claims.RefreshUUID).First(&tokBase).Error; err != nil {
+			fmt.Printf("%s not exist\n", claims.Username)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// hashPass, err := HashPassword(tokBase.TokenRefresh)
+		// if err != nil {
+		// 	// If the cookie is not set, return an unauthorized status
+		// 	fmt.Printf("D1 %s\n", err.Error())
+		// 	w.WriteHeader(http.StatusUnauthorized)
+		// 	return
+		// }
+		fmt.Printf("userRefHash: [%s] | hashPass: %s\n", userRefHash, tokBase.TokenRefresh)
+		b := CheckPasswordHash(tokBase.TokenRefresh, userRefHash)
+		if !b {
+			fmt.Printf("D2\n")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		if claims.ExpiresAt < time.Now().Unix() {
+			fmt.Printf("D3\n")
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
